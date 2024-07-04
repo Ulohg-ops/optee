@@ -34,10 +34,40 @@
 
 /* For the UUID (found in the TA's h-file(s)) */
 #include <test_ta.h>
+#include <time.h>
 
 // #define TA_TEST_CMD_INC_VALUE		0
 // #define TA_TEST_CMD_DEC_VALUE		1
 // #define TA_TEST_CMD_RETTIME_VALUE    2
+
+// void combine_seconds_and_millis(uint32_t second,uint32_t millis)
+// {
+//     uint64_t timestamp_ms = (uint64_t)second * 1000 + millis;
+
+//     printf("System time：%lu\n", timestamp_ms);
+// }
+
+
+void format_timestamp(uint32_t timestamp_second)
+{  
+    time_t seconds = timestamp_second;
+    // uint16_t millis = timestamp_ms % 1000;
+
+	setenv("TZ", "Asia/Taipei", 1);  // 将 "Asia/Taipei" 替换为您的时区
+    tzset();
+
+    // 将 time_t 转换为 tm 结构体
+    struct tm local_time;
+    localtime_r(&seconds, &local_time);
+
+    // 格式化输出时间日期
+    char datetime_str[64];
+    strftime(datetime_str, sizeof(datetime_str), "%Y-%m-%d %H:%M:%S", &local_time);
+
+    // 打印时间日期和毫秒
+    printf("本地时间：%s\n", datetime_str);
+}
+
 
 int main(void)
 {
@@ -80,30 +110,32 @@ int main(void)
 	 */
 	op.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INOUT, TEEC_NONE,
 					 TEEC_NONE, TEEC_NONE);
-	op.params[0].value.a = 42;
+	// op.params[0].value.a = 42;
 
 	/*
 	 * TA_TEST_CMD_INC_VALUE is the actual function in the TA to be
 	 * called.
 	 */
 	 
-	printf("Invoking TA to increment %d\n", op.params[0].value.a);
-	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_INC_VALUE, &op,
-				 &err_origin);
-	if (res != TEEC_SUCCESS)
-		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
-			res, err_origin);
-	printf("TA incremented value to %d\n", op.params[0].value.a);
+	// printf("Invoking TA to increment %d\n", op.params[0].value.a);
+	// res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_INC_VALUE, &op,
+	// 			 &err_origin);
+	// if (res != TEEC_SUCCESS)
+	// 	errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+	// 		res, err_origin);
+	// printf("TA incremented value to %d\n", op.params[0].value.a);
+	
 
 
-	printf("現在時間：\n");
 	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_RETTIME_VALUE, &op,
 				 &err_origin);
 	if (res != TEEC_SUCCESS)
 		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
 			res, err_origin);
-	printf("get time from TA :%d\n",op.params[0].value.a);
-
+	// printf("get second from TA :%d\n",op.params[0].value.a);
+	// printf("get millies from TA :%d\n",op.params[0].value.b);
+	// combine_seconds_and_millis(op.params[0].value.a,op.params[0].value.b);
+	format_timestamp(op.params[0].value.a);
 	/*
 	 * We're done with the TA, close the session and
 	 * destroy the context.
@@ -119,3 +151,5 @@ int main(void)
 
 	return 0;
 }
+
+

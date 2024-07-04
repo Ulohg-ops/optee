@@ -40,6 +40,9 @@
 /* The function IDs implemented in this TA */
 #define TA_TEST_CMD_INC_VALUE		0
 #define TA_TEST_CMD_DEC_VALUE		1
-#define TA_TEST_CMD_RETTIME_VALUE		2
+#define TA_TEST_CMD_RETTIME_VALUE	2
+#define TA_TEST_CMD_SET_BIT			3
+#define TA_TEST_CMD_CLEAR_BIT		4
+#define TA_TEST_CMD_INVERSE_BIT		5
 
 #endif /*TA_TEST_H*/

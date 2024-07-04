@@ -110,7 +110,6 @@ static TEE_Result inc_value(uint32_t param_types,
 	IMSG("Got value: %u from NW", params[0].value.a);
 	params[0].value.a+=10;
 	IMSG("Increase value to: %u", params[0].value.a);
-
 	return TEE_SUCCESS;
 }
 
@@ -134,6 +133,25 @@ static TEE_Result dec_value(uint32_t param_types,
 	return TEE_SUCCESS;
 }
 
+static TEE_Result set_bit(uint32_t param_types,
+	TEE_Param params[4]){	
+	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INOUT,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE);
+	DMSG("setBit function has been called");
+	if (param_types != exp_param_types)
+		return TEE_ERROR_BAD_PARAMETERS;
+
+
+	uint16_t nx;
+    nx = 0x1 << params[0].value.b; // set k bit of nx = 0;
+    return params[0].value.a = nx | params[0].value.a;           
+	
+	return TEE_SUCCESS;
+}
+
+
 static TEE_Result ret_time(uint32_t param_types,
 	TEE_Param params[4])
 {
@@ -142,19 +160,17 @@ static TEE_Result ret_time(uint32_t param_types,
 						   TEE_PARAM_TYPE_NONE,
 						   TEE_PARAM_TYPE_NONE,
 						   TEE_PARAM_TYPE_NONE);
-	TEE_Time current_time;
-
+	TEE_Time current_time,up_time;
 	DMSG("return time function has been called");
-
 	if (param_types != exp_param_types)
 		return TEE_ERROR_BAD_PARAMETERS;
-
-    TEE_GetSystemTime(&current_time);
-    // Set output parameter with current time in seconds
-    params[0].value.a = current_time.seconds;
-
+    TEE_GetREETime(&current_time);
+	printf("current_time: %u %u \n",current_time.seconds,current_time.millis);
+	params[0].value.a = current_time.seconds;
+	params[0].value.b = current_time.millis;
 	return TEE_SUCCESS;
 }
+
 
 
 /*
@@ -175,6 +191,8 @@ TEE_Result TA_InvokeCommandEntryPoint(void __maybe_unused *sess_ctx,
 		return dec_value(param_types, params);
 	case TA_TEST_CMD_RETTIME_VALUE:
 		return ret_time(param_types,params);
+	case TA_TEST_CMD_SET_BIT:
+		return set_bit(param_types,params);
 	default:
 		return TEE_ERROR_BAD_PARAMETERS;
 	}
