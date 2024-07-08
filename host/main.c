@@ -36,36 +36,31 @@
 #include <test_ta.h>
 #include <time.h>
 
-// #define TA_TEST_CMD_INC_VALUE		0
-// #define TA_TEST_CMD_DEC_VALUE		1
-// #define TA_TEST_CMD_RETTIME_VALUE    2
-
 // void combine_seconds_and_millis(uint32_t second,uint32_t millis)
 // {
 //     uint64_t timestamp_ms = (uint64_t)second * 1000 + millis;
 
 //     printf("System time：%lu\n", timestamp_ms);
 // }
-
+void convertUnixTimestampToUptime(uint32_t unixTimestamp) {
+	int hours = unixTimestamp / 3600;
+    int minutes = (unixTimestamp % 3600) / 60;
+    int seconds = unixTimestamp % 60;
+	printf("System uptime: %d hours, %d minutes, %d seconds\n", hours, minutes, seconds);
+}
 
 void format_timestamp(uint32_t timestamp_second)
 {  
     time_t seconds = timestamp_second;
     // uint16_t millis = timestamp_ms % 1000;
 
-	setenv("TZ", "Asia/Taipei", 1);  // 将 "Asia/Taipei" 替换为您的时区
-    tzset();
-
-    // 将 time_t 转换为 tm 结构体
     struct tm local_time;
     localtime_r(&seconds, &local_time);
 
-    // 格式化输出时间日期
     char datetime_str[64];
     strftime(datetime_str, sizeof(datetime_str), "%Y-%m-%d %H:%M:%S", &local_time);
 
-    // 打印时间日期和毫秒
-    printf("本地时间：%s\n", datetime_str);
+    printf("Current time :%s UTC\n", datetime_str);
 }
 
 
@@ -110,7 +105,8 @@ int main(void)
 	 */
 	op.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INOUT, TEEC_NONE,
 					 TEEC_NONE, TEEC_NONE);
-	// op.params[0].value.a = 42;
+	// o
+	
 
 	/*
 	 * TA_TEST_CMD_INC_VALUE is the actual function in the TA to be
@@ -126,7 +122,6 @@ int main(void)
 	// printf("TA incremented value to %d\n", op.params[0].value.a);
 	
 
-
 	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_RETTIME_VALUE, &op,
 				 &err_origin);
 	if (res != TEEC_SUCCESS)
@@ -134,8 +129,54 @@ int main(void)
 			res, err_origin);
 	// printf("get second from TA :%d\n",op.params[0].value.a);
 	// printf("get millies from TA :%d\n",op.params[0].value.b);
-	// combine_seconds_and_millis(op.params[0].value.a,op.params[0].value.b);
 	format_timestamp(op.params[0].value.a);
+	
+	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_RETUPTIME_VALUE, &op,
+				 &err_origin);
+	if (res != TEEC_SUCCESS)
+		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+			res, err_origin);
+	convertUnixTimestampToUptime(op.params[0].value.a);
+
+	op.params[0].value.a = 2454;
+	op.params[0].value.b=3;
+	printf("X:%d Y:%d\n",op.params[0].value.a,op.params[0].value.b);
+	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_SET_BIT, &op,
+				 &err_origin);
+	if (res != TEEC_SUCCESS)
+		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+			res, err_origin);
+	printf("invoked set bit new X:%d \n",op.params[0].value.a);
+
+	op.params[0].value.a = 2454;
+	op.params[0].value.b=3;
+	printf("X:%d Y:%d\n",op.params[0].value.a,op.params[0].value.b);
+	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_CLEAR_BIT, &op,
+				 &err_origin);
+	if (res != TEEC_SUCCESS)
+		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+			res, err_origin);
+	printf("invoked clear bit new X:%d \n",op.params[0].value.a);
+
+	op.params[0].value.a = 2454;
+	op.params[0].value.b=3;
+	printf("X:%d Y:%d\n",op.params[0].value.a,op.params[0].value.b);
+	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_INVERSE_BIT, &op,
+				 &err_origin);
+	if (res != TEEC_SUCCESS)
+		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+			res, err_origin);
+	printf("invoked inverse bit new X:%d \n",op.params[0].value.a);
+
+	op.params[0].value.a = 4291;
+	printf("machine code:%d\n",op.params[0].value.a);
+	res = TEEC_InvokeCommand(&sess, TA_TEST_CMD_SIMULATE_INSTRUCTION, &op,
+				 &err_origin);
+	if (res != TEEC_SUCCESS)
+		errx(1, "TEEC_InvokeCommand failed with code 0x%x origin 0x%x",
+			res, err_origin);
+	printf("Result:%d \n",op.params[0].value.a);
+
 	/*
 	 * We're done with the TA, close the session and
 	 * destroy the context.

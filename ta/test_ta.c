@@ -133,26 +133,7 @@ static TEE_Result dec_value(uint32_t param_types,
 	return TEE_SUCCESS;
 }
 
-static TEE_Result set_bit(uint32_t param_types,
-	TEE_Param params[4]){	
-	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INOUT,
-						   TEE_PARAM_TYPE_NONE,
-						   TEE_PARAM_TYPE_NONE,
-						   TEE_PARAM_TYPE_NONE);
-	DMSG("setBit function has been called");
-	if (param_types != exp_param_types)
-		return TEE_ERROR_BAD_PARAMETERS;
-
-
-	uint16_t nx;
-    nx = 0x1 << params[0].value.b; // set k bit of nx = 0;
-    return params[0].value.a = nx | params[0].value.a;           
-	
-	return TEE_SUCCESS;
-}
-
-
-static TEE_Result ret_time(uint32_t param_types,
+static TEE_Result get_now_time(uint32_t param_types,
 	TEE_Param params[4])
 {
 	
@@ -160,8 +141,8 @@ static TEE_Result ret_time(uint32_t param_types,
 						   TEE_PARAM_TYPE_NONE,
 						   TEE_PARAM_TYPE_NONE,
 						   TEE_PARAM_TYPE_NONE);
-	TEE_Time current_time,up_time;
-	DMSG("return time function has been called");
+	TEE_Time current_time;
+	DMSG("get now time function has been called");
 	if (param_types != exp_param_types)
 		return TEE_ERROR_BAD_PARAMETERS;
     TEE_GetREETime(&current_time);
@@ -171,7 +152,88 @@ static TEE_Result ret_time(uint32_t param_types,
 	return TEE_SUCCESS;
 }
 
+static TEE_Result get_up_time(uint32_t param_types,
+	TEE_Param params[4])
+{
+	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INOUT,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE);
+	TEE_Time up_time;
+	DMSG("get up time function has been called");
+	if (param_types != exp_param_types)
+		return TEE_ERROR_BAD_PARAMETERS;
+    TEE_GetSystemTime(&up_time);
+	printf("up_time: %u %u \n",up_time.seconds,up_time.millis);
+	params[0].value.a = up_time.seconds;
+	params[0].value.b = up_time.millis;
+	return TEE_SUCCESS;
+}
 
+static TEE_Result set_bit(uint32_t param_types,
+	TEE_Param params[4]){
+	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INOUT,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE);
+	DMSG("set bit function has been called");
+	if (param_types != exp_param_types)
+		return TEE_ERROR_BAD_PARAMETERS;
+    params[0].value.a= params[0].value.a |( 1 << params[0].value.b);
+    // OR x with the mask to set the y-th bit
+	return TEE_SUCCESS;
+}
+
+static TEE_Result clear_bit(uint32_t param_types,
+	TEE_Param params[4]){
+	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INOUT,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE);
+	DMSG("clear bit function has been called");
+	if (param_types != exp_param_types)
+		return TEE_ERROR_BAD_PARAMETERS;
+    params[0].value.a= params[0].value.a & ~(1 << params[0].value.b);
+    // AND x with the mask to clear the y-th bit
+	return TEE_SUCCESS;
+}
+
+
+static TEE_Result inverse_bit(uint32_t param_types,
+	TEE_Param params[4]){
+	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_VALUE_INOUT,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE,
+						   TEE_PARAM_TYPE_NONE);
+	DMSG("inverse bit function has been called");
+	if (param_types != exp_param_types)
+		return TEE_ERROR_BAD_PARAMETERS;
+    params[0].value.a=params[0].value.a  ^ (1 << params[0].value.b);
+	return TEE_SUCCESS;
+}
+
+static TEE_Result simulate_instruction(uint32_t param_types,
+	TEE_Param params[4]){
+    uint8_t opcode = (params[0].value.a >> 12) & 0xF;
+    // Extract the first operand (bits 8-11)
+    uint8_t operand1 = (params[0].value.a ) & 0x3F;
+    // Extract the second operand (bits 4-7)
+    uint8_t operand2 = (params[0].value.a >> 6) & 0x3F;
+    
+
+	printf("%d %d %d\n",operand1,operand2,opcode);
+    // Perform operation based on opcode
+    if (opcode == 0x1) { // ADD OPCODE = 0001
+        params[0].value.a = operand1 + operand2;
+    } else if (opcode == 0x5) { // AND OPCODE = 0101
+        params[0].value.a = operand1 & operand2;
+    } else {
+        // NOT DEFINED OPCODE: DO NOTHING
+		printf("++++%d %d\n",0x1,opcode);
+		params[0].value.a=-1;
+    }
+	return TEE_SUCCESS;
+}
 
 /*
  * Called when a TA is invoked. sess_ctx hold that value that was
@@ -190,9 +252,18 @@ TEE_Result TA_InvokeCommandEntryPoint(void __maybe_unused *sess_ctx,
 	case TA_TEST_CMD_DEC_VALUE:
 		return dec_value(param_types, params);
 	case TA_TEST_CMD_RETTIME_VALUE:
-		return ret_time(param_types,params);
+		return get_now_time(param_types,params);
+	case TA_TEST_CMD_RETUPTIME_VALUE:
+		return get_up_time(param_types,params);
 	case TA_TEST_CMD_SET_BIT:
 		return set_bit(param_types,params);
+	case TA_TEST_CMD_CLEAR_BIT:
+		return clear_bit(param_types,params);
+	case TA_TEST_CMD_INVERSE_BIT:
+		return inverse_bit(param_types,params);
+	case TA_TEST_CMD_SIMULATE_INSTRUCTION:
+		return simulate_instruction(param_types,params);
+
 	default:
 		return TEE_ERROR_BAD_PARAMETERS;
 	}
